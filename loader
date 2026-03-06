@@ -1,0 +1,244 @@
+-- ================================================================
+-- KASEN SCRIPT LOADER
+-- by kasen102399 | discord.gg/8h6cpK9rB9
+-- Mobile + PC compatible
+-- ================================================================
+
+local TS  = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+local SCRIPTS = {
+    {
+        name  = "Playground Basketball",
+        sub   = "Auto Shoot | Auto Steal | Speed | Mobile",
+        color = Color3.fromRGB(255,120,0),
+        url   = "https://raw.githubusercontent.com/kasen23101-idk/playground-basketball/refs/heads/main/obfuscated_script-1772413419173.lua",
+    },
+    {
+        name  = "Basketball Legends",
+        sub   = "Auto Green | Auto Guard | Speed | Mobile",
+        color = Color3.fromRGB(80,160,255),
+        url   = "https://raw.githubusercontent.com/kasen23101-idk/Basketball-legends-script/refs/heads/main/Basketball%20script",
+    },
+}
+
+-- ================================================================
+-- GUI
+-- ================================================================
+local SG = Instance.new("ScreenGui")
+SG.Name = "KasenLoader"; SG.ResetOnSpawn = false
+SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+SG.IgnoreGuiInset = true
+pcall(function() SG.Parent = game:GetService("CoreGui") end)
+if not SG.Parent then SG.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") end
+
+-- Background dim
+local Dim = Instance.new("Frame", SG)
+Dim.BackgroundColor3 = Color3.fromRGB(0,0,0)
+Dim.BackgroundTransparency = 0.4
+Dim.BorderSizePixel = 0
+Dim.Size = UDim2.new(1,0,1,0)
+
+-- Panel sizing -- mobile = 90% wide, PC = fixed 370px
+local PW = isMobile and UDim2.new(0.90,0,0,0) or UDim2.new(0,370,0,0)
+
+local Panel = Instance.new("Frame", SG)
+Panel.BackgroundColor3 = Color3.fromRGB(14,14,22)
+Panel.BorderSizePixel = 0
+Panel.AnchorPoint = Vector2.new(0.5,0.5)
+Panel.Position = UDim2.new(0.5,0,0.5,0)
+Panel.Size = UDim2.new(0,0,0,0)
+Panel.AutomaticSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", Panel).CornerRadius = UDim.new(0,18)
+local _brd = Instance.new("UIStroke", Panel)
+_brd.Color = Color3.fromRGB(255,120,0); _brd.Thickness = 2; _brd.Transparency = 0.2
+
+-- Inner layout so AutomaticSize works
+local PLL = Instance.new("UIListLayout", Panel)
+PLL.Padding = UDim.new(0,0)
+PLL.SortOrder = Enum.SortOrder.LayoutOrder
+local PPad = Instance.new("UIPadding", Panel)
+PPad.PaddingBottom = UDim.new(0,14)
+
+-- Tween in
+local targetSize = isMobile and UDim2.new(0.90,0,0,0) or UDim2.new(0,370,0,0)
+TS:Create(Panel, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
+    Size = targetSize
+}):Play()
+
+--  Title bar 
+local TBar = Instance.new("Frame", Panel)
+TBar.BackgroundColor3 = Color3.fromRGB(20,20,32)
+TBar.BorderSizePixel = 0
+TBar.Size = UDim2.new(1,0,0, isMobile and 70 or 58)
+TBar.LayoutOrder = 1
+Instance.new("UICorner", TBar).CornerRadius = UDim.new(0,18)
+local TCov = Instance.new("Frame", TBar)
+TCov.BackgroundColor3 = Color3.fromRGB(20,20,32)
+TCov.BorderSizePixel = 0
+TCov.Position = UDim2.new(0,0,0.5,0); TCov.Size = UDim2.new(1,0,0.5,0)
+
+local TTitl = Instance.new("TextLabel", TBar)
+TTitl.BackgroundTransparency = 1
+TTitl.Position = UDim2.new(0,18,0,8)
+TTitl.Size = UDim2.new(1,-18,0, isMobile and 28 or 24)
+TTitl.Font = Enum.Font.GothamBold
+TTitl.Text = "Kasen Script Loader"
+TTitl.TextColor3 = Color3.fromRGB(255,255,255)
+TTitl.TextSize = isMobile and 20 or 17
+TTitl.TextXAlignment = Enum.TextXAlignment.Left
+
+local TSub = Instance.new("TextLabel", TBar)
+TSub.BackgroundTransparency = 1
+TSub.Position = UDim2.new(0,18,0, isMobile and 38 or 30)
+TSub.Size = UDim2.new(1,-18,0,18)
+TSub.Font = Enum.Font.Gotham
+TSub.Text = "discord.gg/8h6cpK9rB9  |  Tap a script to load"
+TSub.TextColor3 = Color3.fromRGB(120,120,155)
+TSub.TextSize = isMobile and 12 or 11
+TSub.TextXAlignment = Enum.TextXAlignment.Left
+
+--  Status label 
+local StatusFrame = Instance.new("Frame", Panel)
+StatusFrame.BackgroundTransparency = 1
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Size = UDim2.new(1,0,0,0)
+StatusFrame.AutomaticSize = Enum.AutomaticSize.Y
+StatusFrame.LayoutOrder = 99
+
+local StatusLbl = Instance.new("TextLabel", StatusFrame)
+StatusLbl.BackgroundTransparency = 1
+StatusLbl.Size = UDim2.new(1,0,0,24)
+StatusLbl.Font = Enum.Font.Gotham; StatusLbl.Text = ""
+StatusLbl.TextColor3 = Color3.fromRGB(100,255,150)
+StatusLbl.TextSize = isMobile and 13 or 12
+StatusLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+--  Script cards 
+local CARD_H    = isMobile and 110 or 92
+local BTN_H     = isMobile and 52  or 38
+local BTN_W     = isMobile and 110 or 94
+local NAME_SIZE = isMobile and 18  or 15
+local SUB_SIZE  = isMobile and 13  or 11
+
+local function makeCard(data, idx)
+    local wrapper = Instance.new("Frame", Panel)
+    wrapper.BackgroundTransparency = 1
+    wrapper.BorderSizePixel = 0
+    wrapper.Size = UDim2.new(1,0,0, CARD_H + 10)
+    wrapper.LayoutOrder = idx + 1
+
+    local card = Instance.new("Frame", wrapper)
+    card.BackgroundColor3 = Color3.fromRGB(22,22,36)
+    card.BorderSizePixel = 0
+    card.Position = UDim2.new(0,14,0,6)
+    card.Size = UDim2.new(1,-28,0, CARD_H)
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0,14)
+    local cStroke = Instance.new("UIStroke", card)
+    cStroke.Color = data.color; cStroke.Thickness = 1.5; cStroke.Transparency = 0.35
+
+    -- Left accent bar
+    local accent = Instance.new("Frame", card)
+    accent.BackgroundColor3 = data.color
+    accent.BorderSizePixel = 0
+    accent.Position = UDim2.new(0,0,0.1,0)
+    accent.Size = UDim2.new(0,4,0.8,0)
+    Instance.new("UICorner", accent).CornerRadius = UDim.new(1,0)
+
+    -- Name label
+    local nLbl = Instance.new("TextLabel", card)
+    nLbl.BackgroundTransparency = 1
+    nLbl.Position = UDim2.new(0,18,0,12)
+    nLbl.Size = UDim2.new(1, -(BTN_W+28), 0, NAME_SIZE+4)
+    nLbl.Font = Enum.Font.GothamBold; nLbl.Text = data.name
+    nLbl.TextColor3 = Color3.fromRGB(255,255,255)
+    nLbl.TextSize = NAME_SIZE
+    nLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Sub label
+    local sLbl = Instance.new("TextLabel", card)
+    sLbl.BackgroundTransparency = 1
+    sLbl.Position = UDim2.new(0,18,0, 14+NAME_SIZE+4)
+    sLbl.Size = UDim2.new(1,-(BTN_W+28),0, isMobile and 40 or 32)
+    sLbl.Font = Enum.Font.Gotham; sLbl.Text = data.sub
+    sLbl.TextColor3 = Color3.fromRGB(120,120,155)
+    sLbl.TextSize = SUB_SIZE
+    sLbl.TextXAlignment = Enum.TextXAlignment.Left
+    sLbl.TextWrapped = true
+
+    -- Load button
+    local loadBtn = Instance.new("TextButton", card)
+    loadBtn.BackgroundColor3 = data.color
+    loadBtn.BorderSizePixel = 0
+    loadBtn.AnchorPoint = Vector2.new(1,0.5)
+    loadBtn.Position = UDim2.new(1,-14,0.5,0)
+    loadBtn.Size = UDim2.new(0, BTN_W, 0, BTN_H)
+    loadBtn.Font = Enum.Font.GothamBold; loadBtn.Text = "LOAD"
+    loadBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    loadBtn.TextSize = isMobile and 17 or 14
+    Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0,10)
+
+    -- Touch ripple feedback on mobile
+    if isMobile then
+        loadBtn.MouseButton1Down:Connect(function()
+            TS:Create(loadBtn, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, BTN_W-8, 0, BTN_H-6)
+            }):Play()
+        end)
+        loadBtn.MouseButton1Up:Connect(function()
+            TS:Create(loadBtn, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, BTN_W, 0, BTN_H)
+            }):Play()
+        end)
+    else
+        -- PC hover
+        loadBtn.MouseEnter:Connect(function()
+            TS:Create(loadBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = Color3.new(
+                    math.min(data.color.R + 0.12, 1),
+                    math.min(data.color.G + 0.12, 1),
+                    math.min(data.color.B + 0.12, 1)
+                )
+            }):Play()
+        end)
+        loadBtn.MouseLeave:Connect(function()
+            TS:Create(loadBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = data.color
+            }):Play()
+        end)
+    end
+
+    -- Load click
+    loadBtn.MouseButton1Click:Connect(function()
+        loadBtn.Text = "Loading..."
+        loadBtn.BackgroundColor3 = Color3.fromRGB(40,40,60)
+        StatusLbl.Text = "Loading "..data.name.."..."
+        StatusLbl.TextColor3 = Color3.fromRGB(255,215,60)
+
+        task.spawn(function()
+            -- Tween panel out then destroy
+            local tw = TS:Create(Panel,
+                TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+                { Size = UDim2.new(0,0,0,0) }
+            )
+            tw:Play()
+            tw.Completed:Connect(function()
+                SG:Destroy()
+            end)
+
+            task.wait(0.3)
+            local ok, err = pcall(function()
+                loadstring(game:HttpGet(data.url))()
+            end)
+            if not ok then
+                warn("Loader error: "..tostring(err))
+            end
+        end)
+    end)
+end
+
+for i, data in ipairs(SCRIPTS) do
+    makeCard(data, i)
+end
