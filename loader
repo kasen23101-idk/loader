@@ -6,6 +6,7 @@
 
 local TS  = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 
@@ -25,6 +26,30 @@ local SCRIPTS = {
 }
 
 -- ================================================================
+-- LOAD COUNTER  (uses api.countapi.xyz - free, no signup)
+-- Each script gets its own counter key
+-- ================================================================
+local COUNTER_NAMESPACE = "kasenhub"
+
+local function getCount(key)
+    local ok, result = pcall(function()
+        local res = game:HttpGet("https://api.countapi.xyz/get/" .. COUNTER_NAMESPACE .. "/" .. key)
+        local data = HttpService:JSONDecode(res)
+        return tostring(data.value or 0)
+    end)
+    return ok and result or "?"
+end
+
+local function hitCount(key)
+    -- fire and forget - increments the counter by 1
+    task.spawn(function()
+        pcall(function()
+            game:HttpGet("https://api.countapi.xyz/hit/" .. COUNTER_NAMESPACE .. "/" .. key)
+        end)
+    end)
+end
+
+-- ================================================================
 -- GUI
 -- ================================================================
 local SG = Instance.new("ScreenGui")
@@ -41,9 +66,6 @@ Dim.BackgroundTransparency = 0.4
 Dim.BorderSizePixel = 0
 Dim.Size = UDim2.new(1,0,1,0)
 
--- Panel sizing -- mobile = 90% wide, PC = fixed 370px
-local PW = isMobile and UDim2.new(0.90,0,0,0) or UDim2.new(0,370,0,0)
-
 local Panel = Instance.new("Frame", SG)
 Panel.BackgroundColor3 = Color3.fromRGB(14,14,22)
 Panel.BorderSizePixel = 0
@@ -55,20 +77,18 @@ Instance.new("UICorner", Panel).CornerRadius = UDim.new(0,18)
 local _brd = Instance.new("UIStroke", Panel)
 _brd.Color = Color3.fromRGB(255,120,0); _brd.Thickness = 2; _brd.Transparency = 0.2
 
--- Inner layout so AutomaticSize works
 local PLL = Instance.new("UIListLayout", Panel)
 PLL.Padding = UDim.new(0,0)
 PLL.SortOrder = Enum.SortOrder.LayoutOrder
 local PPad = Instance.new("UIPadding", Panel)
 PPad.PaddingBottom = UDim.new(0,14)
 
--- Tween in
 local targetSize = isMobile and UDim2.new(0.90,0,0,0) or UDim2.new(0,370,0,0)
 TS:Create(Panel, TweenInfo.new(0.4, Enum.EasingStyle.Back), {
     Size = targetSize
 }):Play()
 
---  Title bar 
+-- Title bar
 local TBar = Instance.new("Frame", Panel)
 TBar.BackgroundColor3 = Color3.fromRGB(20,20,32)
 TBar.BorderSizePixel = 0
@@ -100,7 +120,7 @@ TSub.TextColor3 = Color3.fromRGB(120,120,155)
 TSub.TextSize = isMobile and 12 or 11
 TSub.TextXAlignment = Enum.TextXAlignment.Left
 
---  Status label 
+-- Status label
 local StatusFrame = Instance.new("Frame", Panel)
 StatusFrame.BackgroundTransparency = 1
 StatusFrame.BorderSizePixel = 0
@@ -116,12 +136,16 @@ StatusLbl.TextColor3 = Color3.fromRGB(100,255,150)
 StatusLbl.TextSize = isMobile and 13 or 12
 StatusLbl.TextXAlignment = Enum.TextXAlignment.Center
 
---  Script cards 
+-- ================================================================
+-- SCRIPT CARDS
+-- ================================================================
 local CARD_H    = isMobile and 110 or 92
 local BTN_H     = isMobile and 52  or 38
 local BTN_W     = isMobile and 110 or 94
 local NAME_SIZE = isMobile and 18  or 15
 local SUB_SIZE  = isMobile and 13  or 11
+
+local countLabels = {}  -- key -> TextLabel, used by polling loop
 
 local function makeCard(data, idx)
     local wrapper = Instance.new("Frame", Panel)
@@ -168,6 +192,25 @@ local function makeCard(data, idx)
     sLbl.TextXAlignment = Enum.TextXAlignment.Left
     sLbl.TextWrapped = true
 
+    -- Load count badge (shown under sub)
+    local countLbl = Instance.new("TextLabel", card)
+    countLbl.BackgroundTransparency = 1
+    countLbl.Position = UDim2.new(0,18,1,-20)
+    countLbl.Size = UDim2.new(0.5,0,0,18)
+    countLbl.Font = Enum.Font.Gotham
+    countLbl.Text = "Loads: ..."
+    countLbl.TextColor3 = Color3.fromRGB(85,85,115)
+    countLbl.TextSize = isMobile and 11 or 10
+    countLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Fetch count async so it doesn't block the UI
+    local countKey = data.name:gsub("%s+", "_"):lower()
+    countLabels[countKey] = countLbl
+    task.spawn(function()
+        local count = getCount(countKey)
+        countLbl.Text = "Loads: " .. count
+    end)
+
     -- Load button
     local loadBtn = Instance.new("TextButton", card)
     loadBtn.BackgroundColor3 = data.color
@@ -180,7 +223,7 @@ local function makeCard(data, idx)
     loadBtn.TextSize = isMobile and 17 or 14
     Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0,10)
 
-    -- Touch ripple feedback on mobile
+    -- Touch ripple / PC hover
     if isMobile then
         loadBtn.MouseButton1Down:Connect(function()
             TS:Create(loadBtn, TweenInfo.new(0.1), {
@@ -188,12 +231,11 @@ local function makeCard(data, idx)
             }):Play()
         end)
         loadBtn.MouseButton1Up:Connect(function()
-            TS:Create(loadBtn, TweenInfo.new(0.1), {
+            TS:Create(loadBtn, TweenInfo.new(0, BTN_W, 0, BTN_H), {
                 Size = UDim2.new(0, BTN_W, 0, BTN_H)
             }):Play()
         end)
     else
-        -- PC hover
         loadBtn.MouseEnter:Connect(function()
             TS:Create(loadBtn, TweenInfo.new(0.15), {
                 BackgroundColor3 = Color3.new(
@@ -214,11 +256,15 @@ local function makeCard(data, idx)
     loadBtn.MouseButton1Click:Connect(function()
         loadBtn.Text = "Loading..."
         loadBtn.BackgroundColor3 = Color3.fromRGB(40,40,60)
-        StatusLbl.Text = "Loading "..data.name.."..."
+        StatusLbl.Text = "Loading " .. data.name .. "..."
         StatusLbl.TextColor3 = Color3.fromRGB(255,215,60)
 
+        -- Increment counter
+        hitCount(countKey)
+        local newCount = getCount(countKey)
+        countLbl.Text = "Loads: " .. newCount
+
         task.spawn(function()
-            -- Tween panel out then destroy
             local tw = TS:Create(Panel,
                 TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
                 { Size = UDim2.new(0,0,0,0) }
@@ -227,13 +273,12 @@ local function makeCard(data, idx)
             tw.Completed:Connect(function()
                 SG:Destroy()
             end)
-
             task.wait(0.3)
             local ok, err = pcall(function()
                 loadstring(game:HttpGet(data.url))()
             end)
             if not ok then
-                warn("Loader error: "..tostring(err))
+                warn("Loader error: " .. tostring(err))
             end
         end)
     end)
@@ -242,3 +287,90 @@ end
 for i, data in ipairs(SCRIPTS) do
     makeCard(data, i)
 end
+
+-- ================================================================
+-- REALTIME POLLING - refresh counts every 5 seconds
+-- ================================================================
+task.spawn(function()
+    while SG and SG.Parent do
+        task.wait(5)
+        if not SG or not SG.Parent then break end
+        -- Refresh per-card counts
+        for _, data in ipairs(SCRIPTS) do
+            local key = data.name:gsub("%s+", "_"):lower()
+            pcall(function()
+                local res = game:HttpGet("https://api.countapi.xyz/get/" .. COUNTER_NAMESPACE .. "/" .. key)
+                local decoded = HttpService:JSONDecode(res)
+                local val = tostring(decoded.value or 0)
+                if countLabels[key] then
+                    countLabels[key].Text = "Loads: " .. val
+                end
+            end)
+        end
+        -- Refresh total
+        local total = 0
+        for _, data in ipairs(SCRIPTS) do
+            local key = data.name:gsub("%s+", "_"):lower()
+            pcall(function()
+                local res = game:HttpGet("https://api.countapi.xyz/get/" .. COUNTER_NAMESPACE .. "/" .. key)
+                local decoded = HttpService:JSONDecode(res)
+                total = total + (decoded.value or 0)
+            end)
+        end
+        if TotalLbl and TotalLbl.Parent then
+            TotalLbl.Text = "Total loads: " .. tostring(total)
+        end
+    end
+end)
+
+-- ================================================================
+-- FOOTER - total loads across all scripts
+-- ================================================================
+local FooterFrame = Instance.new("Frame", Panel)
+FooterFrame.BackgroundColor3 = Color3.fromRGB(18,18,28)
+FooterFrame.BorderSizePixel = 0
+FooterFrame.Size = UDim2.new(1,-28,0, isMobile and 38 or 32)
+FooterFrame.LayoutOrder = 100
+local FooterPad = Instance.new("UIPadding", FooterFrame)
+FooterPad.PaddingLeft = UDim.new(0,14); FooterPad.PaddingRight = UDim.new(0,14)
+local FOffset = Instance.new("Frame", FooterFrame)
+FOffset.BackgroundColor3 = Color3.fromRGB(18,18,28)
+FOffset.BorderSizePixel = 0
+FOffset.Position = UDim2.new(0,0,0,0); FOffset.Size = UDim2.new(1,0,0.5,0)
+local FooterStroke = Instance.new("UIStroke", FooterFrame)
+FooterStroke.Color = Color3.fromRGB(40,40,60); FooterStroke.Thickness = 1
+
+-- Left: total loads label
+local TotalLbl = Instance.new("TextLabel", FooterFrame)
+TotalLbl.BackgroundTransparency = 1
+TotalLbl.Position = UDim2.new(0,0,0,0); TotalLbl.Size = UDim2.new(0.6,0,1,0)
+TotalLbl.Font = Enum.Font.Gotham
+TotalLbl.Text = "Total loads: ..."
+TotalLbl.TextColor3 = Color3.fromRGB(85,85,115)
+TotalLbl.TextSize = isMobile and 12 or 10
+TotalLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Right: "by kasen" tag
+local ByLbl = Instance.new("TextLabel", FooterFrame)
+ByLbl.BackgroundTransparency = 1
+ByLbl.Position = UDim2.new(0.5,0,0,0); ByLbl.Size = UDim2.new(0.5,0,1,0)
+ByLbl.Font = Enum.Font.Gotham
+ByLbl.Text = "by kasen102399"
+ByLbl.TextColor3 = Color3.fromRGB(70,70,100)
+ByLbl.TextSize = isMobile and 12 or 10
+ByLbl.TextXAlignment = Enum.TextXAlignment.Right
+
+-- Fetch and sum all script counts for the total
+task.spawn(function()
+    local total = 0
+    for _, data in ipairs(SCRIPTS) do
+        local key = data.name:gsub("%s+","_"):lower()
+        local ok, result = pcall(function()
+            local res = game:HttpGet("https://api.countapi.xyz/get/" .. COUNTER_NAMESPACE .. "/" .. key)
+            local decoded = HttpService:JSONDecode(res)
+            return decoded.value or 0
+        end)
+        if ok then total = total + result end
+    end
+    TotalLbl.Text = "Total loads: " .. tostring(total)
+end)
