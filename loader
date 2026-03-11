@@ -13,13 +13,19 @@ local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 local SCRIPTS = {
     {
         name  = "Playground Basketball",
-        sub   = "Auto Shoot | Auto Steal | Speed | Mobile",
+        sub   = "Auto Shoot | Auto Steal | Speed | Mobile and pc",
         color = Color3.fromRGB(255,120,0),
         url   = "https://raw.githubusercontent.com/kasen23101-idk/playground-basketball/refs/heads/main/obfuscated_script-1772413419173.lua",
+    }, 
+    {
+        name  = "Football Fusion 2",
+        sub   = "Qb aimbot | Mags | Paid | Mobile and pc",
+        color = Color3.fromRGB(0,128,0),
+        url   = "https://raw.githubusercontent.com/kasen23101-idk/FF2/refs/heads/main/Kasen%20Hub",
     },
     {
         name  = "Basketball Legends",
-        sub   = "Auto Green | Auto Guard | Speed | Mobile",
+        sub   = "Auto Green | Auto Guard | Speed | Mobile and pc",
         color = Color3.fromRGB(80,160,255),
         url   = "https://raw.githubusercontent.com/kasen23101-idk/Basketball-legends-script/refs/heads/main/Basketball%20script",
     },
