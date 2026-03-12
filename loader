@@ -18,6 +18,12 @@ local SCRIPTS = {
         url   = "https://raw.githubusercontent.com/kasen23101-idk/playground-basketball/refs/heads/main/obfuscated_script-1772413419173.lua",
     }, 
     {
+        name  = "Track and Field infinite",
+        sub   = "Cframe speed | ac bypass | Macro | Mobile and pc",
+        color = Color3.fromRGB(80,160,255),
+        url   = "https://raw.githubusercontent.com/kasen23101-idk/test/refs/heads/main/Track%20and%20field%20infinite",
+    },
+    {
         name  = "Football Fusion 2",
         sub   = "Qb aimbot | Mags | Paid | Mobile and pc",
         color = Color3.fromRGB(0,128,0),
